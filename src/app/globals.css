@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(151, 229, 212, 0.55), transparent 32%),
+    radial-gradient(circle at top right, rgba(24, 148, 126, 0.18), transparent 28%),
+    linear-gradient(180deg, #f7fcfa 0%, #f1f7f3 100%);
+}
+
+body {
+  min-height: 100vh;
+  background: transparent;
+  color: #123126;
+}
+
+::selection {
+  background: rgba(24, 148, 126, 0.22);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
