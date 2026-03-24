@@ -17,8 +17,20 @@ create table if not exists public.listings (
   category text not null check (category in ('Tools', 'Outdoor', 'Kitchen', 'Electronics', 'Sports', 'Other')),
   photo_url text,
   neighborhood text not null,
+  pickup_latitude double precision,
+  pickup_longitude double precision,
   is_available boolean not null default true,
-  created_at timestamptz not null default timezone('utc', now())
+  created_at timestamptz not null default timezone('utc', now()),
+  constraint listings_pickup_coordinates_check check (
+    (
+      pickup_latitude is null
+      and pickup_longitude is null
+    )
+    or (
+      pickup_latitude between -90 and 90
+      and pickup_longitude between -180 and 180
+    )
+  )
 );
 
 create table if not exists public.borrow_requests (
@@ -36,6 +48,7 @@ create table if not exists public.borrow_requests (
 create index if not exists listings_owner_id_idx on public.listings (owner_id);
 create index if not exists listings_category_idx on public.listings (category);
 create index if not exists listings_neighborhood_idx on public.listings (neighborhood);
+create index if not exists listings_pickup_coordinates_idx on public.listings (pickup_latitude, pickup_longitude);
 create index if not exists borrow_requests_listing_id_idx on public.borrow_requests (listing_id);
 create index if not exists borrow_requests_requester_id_idx on public.borrow_requests (requester_id);
 create index if not exists borrow_requests_status_idx on public.borrow_requests (status);

@@ -18,6 +18,28 @@ export function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+export function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(value));
+}
+
+export function formatRating(value: number) {
+  return value.toFixed(1).replace(/\.0$/, "");
+}
+
+export function getTodayDateValue() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 export function formatDateRange(startDate: string, endDate: string) {
   return `${formatDate(startDate)} - ${formatDate(endDate)}`;
 }

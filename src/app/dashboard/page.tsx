@@ -62,6 +62,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           myListings={data.myListings}
           myRequests={data.myRequests}
           unreadIncomingCount={data.unreadIncomingCount}
+          viewerId={data.user.id}
         />
       </section>
     </div>

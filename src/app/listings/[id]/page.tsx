@@ -6,7 +6,7 @@ import { BorrowRequestForm } from "@/components/borrow-request-form";
 import { SetupNotice } from "@/components/setup-notice";
 import { getListingPageData } from "@/lib/data";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { formatDate, getFirstName } from "@/lib/utils";
+import { formatDate, formatRating, getFirstName } from "@/lib/utils";
 
 type ListingPageProps = {
   params: {
@@ -23,7 +23,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
     );
   }
 
-  const { listing, viewer } = await getListingPageData(params.id);
+  const { listing, viewer, reviews, reviewSummary } = await getListingPageData(params.id);
 
   if (!listing) {
     notFound();
@@ -65,7 +65,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
           <h1 className="mt-5 font-display text-4xl text-ink sm:text-5xl">{listing.title}</h1>
           <p className="mt-5 whitespace-pre-line text-base leading-8 text-slate-600">{listing.description}</p>
 
-          <div className="mt-8 grid gap-4 rounded-[2rem] bg-canvas p-5 sm:grid-cols-3">
+          <div className="mt-8 grid gap-4 rounded-[2rem] bg-canvas p-5 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">Owner</div>
               <div className="mt-2 text-base font-semibold text-ink">{getFirstName(listing.owner?.full_name)}</div>
@@ -78,7 +78,58 @@ export default async function ListingPage({ params }: ListingPageProps) {
               <div className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">Posted</div>
               <div className="mt-2 text-base font-semibold text-ink">{formatDate(listing.created_at)}</div>
             </div>
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">Rating</div>
+              <div className="mt-2 text-base font-semibold text-ink">
+                {reviewSummary.averageRating !== null ? `${formatRating(reviewSummary.averageRating)}/5` : "No ratings yet"}
+              </div>
+              <div className="mt-1 text-sm text-slate-500">
+                {reviewSummary.reviewCount === 0
+                  ? "Be the first borrower to leave feedback."
+                  : `${reviewSummary.reviewCount} ${reviewSummary.reviewCount === 1 ? "review" : "reviews"}`}
+              </div>
+            </div>
           </div>
+
+          <section className="mt-8 rounded-[2rem] bg-canvas p-5 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">Borrower feedback</div>
+                <h2 className="mt-2 font-display text-3xl text-ink">
+                  {reviewSummary.averageRating !== null
+                    ? `${formatRating(reviewSummary.averageRating)}/5 from neighbors`
+                    : "No reviews yet"}
+                </h2>
+              </div>
+              <p className="max-w-md text-sm leading-7 text-slate-600">
+                Reviews are written by borrowers after an accepted request has ended.
+              </p>
+            </div>
+
+            {reviews.length > 0 ? (
+              <div className="mt-6 space-y-4">
+                {reviews.map((review) => (
+                  <article key={review.id} className="rounded-[1.5rem] border border-white/70 bg-white px-5 py-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-ink">{getFirstName(review.reviewer?.full_name)}</div>
+                        <div className="mt-1 text-sm text-slate-500">{formatDate(review.created_at)}</div>
+                      </div>
+                      <div className="inline-flex rounded-full bg-teal-600 px-3 py-1 text-sm font-semibold text-white">
+                        {review.rating}/5
+                      </div>
+                    </div>
+                    {review.comment ? <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">“{review.comment}”</p> : null}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-6 rounded-[1.5rem] border border-dashed border-teal-200 bg-white/70 px-5 py-6 text-sm leading-7 text-slate-600">
+                This item has not been reviewed yet. Once a borrower completes an accepted request, they can rate the experience
+                here.
+              </div>
+            )}
+          </section>
 
           {viewer?.id === listing.owner_id ? (
             <div className="mt-6">

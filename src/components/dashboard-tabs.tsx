@@ -10,6 +10,7 @@ import type { BorrowRequestWithListing, IncomingRequest } from "@/lib/data";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatDateRange, getFirstName, getStatusClasses } from "@/lib/utils";
 
+import { BorrowRequestReviewForm } from "./borrow-request-review-form";
 import { EmptyState } from "./empty-state";
 
 type DashboardTabsProps = {
@@ -26,6 +27,7 @@ type DashboardTabsProps = {
   myRequests: BorrowRequestWithListing[];
   incomingRequests: IncomingRequest[];
   unreadIncomingCount: number;
+  viewerId: string;
 };
 
 type TabKey = DashboardTabsProps["initialTab"];
@@ -35,7 +37,8 @@ export function DashboardTabs({
   myListings,
   myRequests,
   incomingRequests,
-  unreadIncomingCount
+  unreadIncomingCount,
+  viewerId
 }: DashboardTabsProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
@@ -223,7 +226,13 @@ export function DashboardTabs({
                   </span>
                 </div>
                 {request.listing ? (
-                  <div className="mt-5">
+                  <div className="mt-5 flex flex-wrap gap-4">
+                    <Link
+                      className="text-sm font-semibold text-teal-700 transition hover:text-teal-800"
+                      href={`/messages/${request.id}`}
+                    >
+                      Open chat
+                    </Link>
                     <Link
                       className="text-sm font-semibold text-teal-700 transition hover:text-teal-800"
                       href={`/listings/${request.listing.id}`}
@@ -231,7 +240,25 @@ export function DashboardTabs({
                       View listing
                     </Link>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="mt-5">
+                    <Link
+                      className="text-sm font-semibold text-teal-700 transition hover:text-teal-800"
+                      href={`/messages/${request.id}`}
+                    >
+                      Open chat
+                    </Link>
+                  </div>
+                )}
+
+                <BorrowRequestReviewForm
+                  endDate={request.end_date}
+                  initialReview={request.review}
+                  listingId={request.listing_id}
+                  requestId={request.id}
+                  status={request.status}
+                  viewerId={viewerId}
+                />
               </article>
             ))}
           </div>
@@ -271,6 +298,12 @@ export function DashboardTabs({
                     <span className={cn("rounded-full px-3 py-1 text-sm font-semibold", getStatusClasses(request.status))}>
                       {request.status}
                     </span>
+                    <Link
+                      className="text-sm font-semibold text-teal-700 transition hover:text-teal-800"
+                      href={`/messages/${request.id}`}
+                    >
+                      Open chat
+                    </Link>
                     {request.status === "pending" ? (
                       <div className="flex flex-wrap gap-3">
                         <button

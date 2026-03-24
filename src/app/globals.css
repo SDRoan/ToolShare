@@ -32,3 +32,46 @@ a {
 input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
+
+.toolshare-marker {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 3px solid #ffffff;
+  border-radius: 9999px;
+  background: #117565;
+  box-shadow: 0 10px 20px rgba(16, 61, 54, 0.22);
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease;
+}
+
+.toolshare-marker[data-available="false"] {
+  background: rgba(15, 23, 42, 0.92);
+}
+
+.toolshare-marker[data-selected="true"] {
+  transform: scale(1.35);
+  box-shadow: 0 0 0 8px rgba(17, 117, 101, 0.18);
+}
+
+.maplibregl-popup-content {
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 30px rgba(16, 61, 54, 0.12);
+  color: #123126;
+  padding: 0;
+}
+
+.maplibregl-popup-close-button {
+  color: #0e5e52;
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: rgba(255, 255, 255, 0.96) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.96) !important;
+}

@@ -47,6 +47,12 @@ export function Header({ user, profile, unreadIncomingCount }: HeaderProps) {
                 Share an item
               </Link>
               <Link
+                className="rounded-full px-4 py-2 transition hover:bg-teal-50 hover:text-teal-700"
+                href="/requests/new"
+              >
+                Request a tool
+              </Link>
+              <Link
                 className="inline-flex items-center gap-2 rounded-full bg-teal-50 px-4 py-2 text-teal-800 transition hover:bg-teal-100"
                 href="/dashboard"
               >

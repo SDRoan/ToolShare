@@ -4,6 +4,7 @@ import { Header } from "@/components/header";
 import { getHeaderSessionData } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
+import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import { Toaster } from "sonner";
 

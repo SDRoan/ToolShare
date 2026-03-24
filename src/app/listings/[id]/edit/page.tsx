@@ -34,6 +34,13 @@ export default async function EditListingPage({ params }: EditListingPageProps) 
           description: listing.description,
           category: listing.category,
           neighborhood: listing.neighborhood,
+          pickupLocation:
+            listing.pickup_latitude !== null && listing.pickup_longitude !== null
+              ? {
+                  latitude: listing.pickup_latitude,
+                  longitude: listing.pickup_longitude
+                }
+              : null,
           isAvailable: listing.is_available,
           photoUrl: listing.photo_url
         }}

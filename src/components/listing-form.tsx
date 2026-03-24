@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { CATEGORIES } from "@/lib/constants";
@@ -12,6 +12,8 @@ import { createClient } from "@/lib/supabase/client";
 import { getStoragePathFromUrl, slugifyFileName } from "@/lib/utils";
 import { listingSchema, type ListingFormValues } from "@/lib/validators";
 import { ListingCategory } from "@/types/database";
+
+import { LocationPicker } from "./location-picker";
 
 type ListingFormProps = {
   mode: "create" | "edit";
@@ -22,12 +24,34 @@ type ListingFormProps = {
     description: string;
     category: ListingCategory;
     neighborhood: string;
+    pickupLocation?: {
+      latitude: number;
+      longitude: number;
+    } | null;
     isAvailable: boolean;
     photoUrl?: string | null;
   };
 };
 
 const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    error.message.trim()
+  ) {
+    return error.message;
+  }
+
+  return fallback;
+}
 
 export function ListingForm({ mode, userId, listingId, initialValues }: ListingFormProps) {
   const router = useRouter();
@@ -43,6 +67,7 @@ export function ListingForm({ mode, userId, listingId, initialValues }: ListingF
       description: initialValues?.description ?? "",
       category: initialValues?.category ?? "Tools",
       neighborhood: initialValues?.neighborhood ?? "",
+      pickupLocation: initialValues?.pickupLocation ?? undefined,
       isAvailable: initialValues?.isAvailable ?? true
     }
   });
@@ -105,6 +130,8 @@ export function ListingForm({ mode, userId, listingId, initialValues }: ListingF
             description: values.description,
             category: values.category,
             neighborhood: values.neighborhood,
+            pickup_latitude: values.pickupLocation?.latitude ?? null,
+            pickup_longitude: values.pickupLocation?.longitude ?? null,
             is_available: values.isAvailable,
             photo_url: photoUrl
           })
@@ -128,6 +155,8 @@ export function ListingForm({ mode, userId, listingId, initialValues }: ListingF
           description: values.description,
           category: values.category,
           neighborhood: values.neighborhood,
+          pickup_latitude: values.pickupLocation?.latitude ?? null,
+          pickup_longitude: values.pickupLocation?.longitude ?? null,
           is_available: values.isAvailable,
           photo_url: photoUrl
         })
@@ -142,8 +171,7 @@ export function ListingForm({ mode, userId, listingId, initialValues }: ListingF
       router.push(`/listings/${listingId}`);
       router.refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Something went wrong while saving the listing.";
-      toast.error(message);
+      toast.error(getErrorMessage(error, "Something went wrong while saving the listing."));
     } finally {
       setIsSubmitting(false);
     }
@@ -174,8 +202,7 @@ export function ListingForm({ mode, userId, listingId, initialValues }: ListingF
       router.push("/dashboard?tab=listings");
       router.refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not delete this listing.";
-      toast.error(message);
+      toast.error(getErrorMessage(error, "Could not delete this listing."));
     } finally {
       setIsDeleting(false);
     }
@@ -295,6 +322,19 @@ export function ListingForm({ mode, userId, listingId, initialValues }: ListingF
             </p>
           </div>
         </div>
+
+        <Controller
+          control={form.control}
+          name="pickupLocation"
+          render={({ field }) => (
+            <LocationPicker
+              error={form.formState.errors.pickupLocation?.message}
+              neighborhood={form.watch("neighborhood")}
+              value={field.value ?? null}
+              onChange={field.onChange}
+            />
+          )}
+        />
 
         {initialValues?.photoUrl ? (
           <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-canvas p-3">

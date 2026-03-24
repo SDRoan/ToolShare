@@ -5,7 +5,7 @@ type SetupNoticeProps = {
 
 export function SetupNotice({
   title = "Connect Supabase To Continue",
-  description = "ToolShare needs Supabase environment variables before auth, listings, and requests can work locally."
+  description = "ToolShare needs Supabase environment variables before auth, listings, request posts, and comments can work locally."
 }: SetupNoticeProps) {
   return (
     <div className="mx-auto w-full max-w-3xl rounded-[2rem] border border-amber-200 bg-white/90 p-6 shadow-soft sm:p-8">
@@ -27,8 +27,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key`}</code>
         <div className="rounded-[1.5rem] bg-canvas p-5">
           <div className="text-sm font-semibold text-ink">2. Run the SQL migration in Supabase</div>
           <p className="mt-2 text-sm leading-7 text-slate-600">
-            Use `supabase/migrations/001_init.sql` to create tables, RLS policies, the trigger, and the storage
-            bucket.
+            Run `supabase/migrations/001_init.sql`, then `002_add_listing_coordinates.sql`, and
+            `003_add_tool_requests.sql`, and `004_add_tool_request_comment_replies.sql` to create the tables, reply
+            schema, RLS policies, and storage buckets.
           </p>
         </div>
 

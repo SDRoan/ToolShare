@@ -20,11 +20,12 @@ export default function HomePage() {
             Community-powered borrowing
           </div>
           <h1 className="mt-6 max-w-2xl font-display text-5xl leading-tight text-ink sm:text-6xl">
-            Share the tools you own. Borrow what you need next door.
+            Share the tools you own. Ask for what you need next door.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
             ToolShare helps neighbors lend drills, ladders, kitchen gear, sports equipment, and other useful items
-            without the hassle of group chats or spreadsheets.
+            without the hassle of group chats or spreadsheets, while also giving borrowers a place to post what they
+            need and collect replies from the community.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
@@ -38,6 +39,12 @@ export default function HomePage() {
               href="/browse"
             >
               Browse items
+            </Link>
+            <Link
+              className="rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-teal-200 hover:text-teal-700"
+              href="/requests/new"
+            >
+              Request a tool
             </Link>
           </div>
           <div className="mt-10 grid gap-4 text-sm text-slate-600 sm:grid-cols-3">
@@ -77,7 +84,7 @@ export default function HomePage() {
                 <div className="rounded-3xl bg-white/10 p-4">
                   <div className="text-sm font-semibold text-teal-100">3. Keep it moving</div>
                   <p className="mt-2 text-sm text-teal-50/90">
-                    Update availability anytime so the library stays fresh, accurate, and useful.
+                    Update availability anytime, or post a request when you need a tool the community has not listed yet.
                   </p>
                 </div>
               </div>
@@ -96,9 +103,10 @@ export default function HomePage() {
         </article>
         <article className="rounded-[2rem] border border-white/70 bg-white/80 p-7 shadow-soft">
           <div className="text-sm font-semibold uppercase tracking-[0.25em] text-teal-700">For borrowers</div>
-          <h2 className="mt-4 font-display text-3xl text-ink">Find what you need fast</h2>
+          <h2 className="mt-4 font-display text-3xl text-ink">Find it fast or ask for it</h2>
           <p className="mt-3 text-slate-600">
-            Search by keyword, filter by category, and request dates that work for your project or event.
+            Search by keyword, filter by category, request dates that work for your project, or post a need so others
+            can respond with an offer.
           </p>
         </article>
         <article className="rounded-[2rem] border border-white/70 bg-white/80 p-7 shadow-soft">
