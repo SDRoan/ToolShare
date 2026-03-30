@@ -8,7 +8,18 @@ import { toast } from "sonner";
 
 import type { BorrowRequestWithListing, IncomingRequest } from "@/lib/data";
 import { createClient } from "@/lib/supabase/client";
-import { cn, formatDateRange, getFirstName, getStatusClasses } from "@/lib/utils";
+import type { BorrowRequestStatus } from "@/types/database";
+import {
+  cn,
+  datesOverlap,
+  formatBorrowLifecycleStatus,
+  formatDateTime,
+  formatDateRange,
+  getBorrowLifecycleStatus,
+  getBorrowRequestReminder,
+  getFirstName,
+  getStatusClasses
+} from "@/lib/utils";
 
 import { BorrowRequestReviewForm } from "./borrow-request-review-form";
 import { EmptyState } from "./empty-state";
@@ -32,6 +43,41 @@ type DashboardTabsProps = {
 
 type TabKey = DashboardTabsProps["initialTab"];
 
+function buildBorrowRequestPatch(status: BorrowRequestStatus) {
+  const timestamp = new Date().toISOString();
+
+  switch (status) {
+    case "borrowed":
+      return { status, picked_up_at: timestamp };
+    case "returned":
+      return { status, returned_at: timestamp };
+    case "cancelled":
+      return { status, cancelled_at: timestamp };
+    default:
+      return { status };
+  }
+}
+
+function getBorrowRequestActivityLine(request: {
+  cancelled_at?: string | null;
+  picked_up_at?: string | null;
+  returned_at?: string | null;
+}) {
+  if (request.returned_at) {
+    return `Returned ${formatDateTime(request.returned_at)}`;
+  }
+
+  if (request.picked_up_at) {
+    return `Picked up ${formatDateTime(request.picked_up_at)}`;
+  }
+
+  if (request.cancelled_at) {
+    return `Cancelled ${formatDateTime(request.cancelled_at)}`;
+  }
+
+  return null;
+}
+
 export function DashboardTabs({
   initialTab,
   myListings,
@@ -42,10 +88,23 @@ export function DashboardTabs({
 }: DashboardTabsProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
+  const [localMyRequests, setLocalMyRequests] = useState(myRequests);
   const [localIncomingRequests, setLocalIncomingRequests] = useState(incomingRequests);
   const [localUnreadCount, setLocalUnreadCount] = useState(unreadIncomingCount);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const supabase = createClient();
+
+  useEffect(() => {
+    setLocalMyRequests(myRequests);
+  }, [myRequests]);
+
+  useEffect(() => {
+    setLocalIncomingRequests(incomingRequests);
+  }, [incomingRequests]);
+
+  useEffect(() => {
+    setLocalUnreadCount(unreadIncomingCount);
+  }, [unreadIncomingCount]);
 
   useEffect(() => {
     let isMounted = true;
@@ -74,10 +133,51 @@ export function DashboardTabs({
     };
   }, [activeTab, localUnreadCount, router]);
 
-  async function updateIncomingRequest(requestId: string, status: "accepted" | "declined") {
-    setPendingActionId(`${requestId}:${status}`);
+  async function updateBorrowerRequest(request: BorrowRequestWithListing, nextStatus: BorrowRequestStatus) {
+    const patch = buildBorrowRequestPatch(nextStatus);
+    setPendingActionId(`${request.id}:${nextStatus}`);
 
-    const { error } = await supabase.from("borrow_requests").update({ status }).eq("id", requestId);
+    const { error } = await supabase.from("borrow_requests").update(patch).eq("id", request.id).eq("requester_id", viewerId);
+
+    setPendingActionId(null);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    setLocalMyRequests((current) =>
+      current.map((item) => (item.id === request.id ? { ...item, ...patch } : item))
+    );
+
+    toast.success(nextStatus === "cancelled" ? "Request cancelled." : "Borrow marked returned.");
+    router.refresh();
+  }
+
+  async function updateIncomingRequest(request: IncomingRequest, nextStatus: BorrowRequestStatus) {
+    const patch = buildBorrowRequestPatch(nextStatus);
+    setPendingActionId(`${request.id}:${nextStatus}`);
+
+    const { error } = await supabase.from("borrow_requests").update(patch).eq("id", request.id);
+
+    if (!error && nextStatus === "accepted") {
+      const overlappingPendingIds = localIncomingRequests
+        .filter(
+          (item) =>
+            item.id !== request.id &&
+            item.listing_id === request.listing_id &&
+            item.status === "pending" &&
+            datesOverlap(item.start_date, item.end_date, request.start_date, request.end_date)
+        )
+        .map((item) => item.id);
+
+      if (overlappingPendingIds.length > 0) {
+        await supabase
+          .from("borrow_requests")
+          .update({ status: "declined" })
+          .in("id", overlappingPendingIds);
+      }
+    }
 
     setPendingActionId(null);
 
@@ -87,16 +187,40 @@ export function DashboardTabs({
     }
 
     setLocalIncomingRequests((current) =>
-      current.map((request) => (request.id === requestId ? { ...request, status } : request))
+      current.map((item) => {
+        if (item.id === request.id) {
+          return { ...item, ...patch };
+        }
+
+        if (
+          nextStatus === "accepted" &&
+          item.listing_id === request.listing_id &&
+          item.status === "pending" &&
+          datesOverlap(item.start_date, item.end_date, request.start_date, request.end_date)
+        ) {
+          return { ...item, status: "declined" as const };
+        }
+
+        return item;
+      })
     );
 
-    toast.success(status === "accepted" ? "Request accepted." : "Request declined.");
+    const successMessageByStatus: Record<BorrowRequestStatus, string> = {
+      accepted: "Request accepted.",
+      borrowed: "Borrow marked picked up.",
+      returned: "Borrow marked returned.",
+      declined: "Request declined.",
+      cancelled: "Request updated.",
+      pending: "Request updated."
+    };
+
+    toast.success(successMessageByStatus[nextStatus]);
     router.refresh();
   }
 
   const tabs: Array<{ key: TabKey; label: string; count: number }> = [
     { key: "listings", label: "My Listings", count: myListings.length },
-    { key: "requests", label: "My Requests", count: myRequests.length },
+    { key: "requests", label: "My Requests", count: localMyRequests.length },
     { key: "incoming", label: "Incoming Requests", count: localIncomingRequests.length }
   ];
 
@@ -201,31 +325,52 @@ export function DashboardTabs({
       ) : null}
 
       {activeTab === "requests" ? (
-        myRequests.length > 0 ? (
+        localMyRequests.length > 0 ? (
           <div className="space-y-4">
-            {myRequests.map((request) => (
-              <article
-                key={request.id}
-                className="rounded-[2rem] border border-white/70 bg-white/85 p-5 shadow-soft"
-              >
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.25em] text-teal-700">
-                      Request sent
+            {localMyRequests.map((request) => {
+              const lifecycleStatus = getBorrowLifecycleStatus(request.status, request.end_date, request.returned_at);
+              const reminder = getBorrowRequestReminder(
+                request.status,
+                request.start_date,
+                request.end_date,
+                request.returned_at
+              );
+              const activityLine = getBorrowRequestActivityLine(request);
+              const canCancel = request.status === "pending" || request.status === "accepted";
+              const canMarkReturned = request.status === "borrowed" || lifecycleStatus === "overdue";
+
+              return (
+                <article
+                  key={request.id}
+                  className="rounded-[2rem] border border-white/70 bg-white/85 p-5 shadow-soft"
+                >
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.25em] text-teal-700">Request sent</div>
+                      <h3 className="mt-2 text-2xl font-semibold text-ink">
+                        {request.listing?.title || "Listing removed"}
+                      </h3>
+                      <p className="mt-2 text-sm text-slate-600">
+                        Owner: {getFirstName(request.listing?.owner?.full_name)} •{" "}
+                        {formatDateRange(request.start_date, request.end_date)}
+                      </p>
+                      {request.message ? <p className="mt-3 text-sm text-slate-500">“{request.message}”</p> : null}
+                      {activityLine ? <p className="mt-3 text-sm font-medium text-slate-500">{activityLine}</p> : null}
                     </div>
-                    <h3 className="mt-2 text-2xl font-semibold text-ink">
-                      {request.listing?.title || "Listing removed"}
-                    </h3>
-                    <p className="mt-2 text-sm text-slate-600">
-                      Owner: {getFirstName(request.listing?.owner?.full_name)} • {formatDateRange(request.start_date, request.end_date)}
-                    </p>
-                    {request.message ? <p className="mt-3 text-sm text-slate-500">“{request.message}”</p> : null}
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {reminder ? (
+                        <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
+                          {reminder}
+                        </span>
+                      ) : null}
+                      <span
+                        className={cn("rounded-full px-3 py-1 text-sm font-semibold", getStatusClasses(lifecycleStatus))}
+                      >
+                        {formatBorrowLifecycleStatus(lifecycleStatus)}
+                      </span>
+                    </div>
                   </div>
-                  <span className={cn("rounded-full px-3 py-1 text-sm font-semibold", getStatusClasses(request.status))}>
-                    {request.status}
-                  </span>
-                </div>
-                {request.listing ? (
+
                   <div className="mt-5 flex flex-wrap gap-4">
                     <Link
                       className="text-sm font-semibold text-teal-700 transition hover:text-teal-800"
@@ -233,34 +378,48 @@ export function DashboardTabs({
                     >
                       Open chat
                     </Link>
-                    <Link
-                      className="text-sm font-semibold text-teal-700 transition hover:text-teal-800"
-                      href={`/listings/${request.listing.id}`}
-                    >
-                      View listing
-                    </Link>
+                    {request.listing ? (
+                      <Link
+                        className="text-sm font-semibold text-teal-700 transition hover:text-teal-800"
+                        href={`/listings/${request.listing.id}`}
+                      >
+                        View listing
+                      </Link>
+                    ) : null}
+                    {canCancel ? (
+                      <button
+                        className="text-sm font-semibold text-rose-700 transition hover:text-rose-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={pendingActionId === `${request.id}:cancelled`}
+                        onClick={() => updateBorrowerRequest(request, "cancelled")}
+                        type="button"
+                      >
+                        {pendingActionId === `${request.id}:cancelled` ? "Cancelling..." : "Cancel request"}
+                      </button>
+                    ) : null}
+                    {canMarkReturned ? (
+                      <button
+                        className="text-sm font-semibold text-teal-700 transition hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={pendingActionId === `${request.id}:returned`}
+                        onClick={() => updateBorrowerRequest(request, "returned")}
+                        type="button"
+                      >
+                        {pendingActionId === `${request.id}:returned` ? "Saving..." : "Mark returned"}
+                      </button>
+                    ) : null}
                   </div>
-                ) : (
-                  <div className="mt-5">
-                    <Link
-                      className="text-sm font-semibold text-teal-700 transition hover:text-teal-800"
-                      href={`/messages/${request.id}`}
-                    >
-                      Open chat
-                    </Link>
-                  </div>
-                )}
 
-                <BorrowRequestReviewForm
-                  endDate={request.end_date}
-                  initialReview={request.review}
-                  listingId={request.listing_id}
-                  requestId={request.id}
-                  status={request.status}
-                  viewerId={viewerId}
-                />
-              </article>
-            ))}
+                  <BorrowRequestReviewForm
+                    endDate={request.end_date}
+                    initialReview={request.review}
+                    listingId={request.listing_id}
+                    requestId={request.id}
+                    returnedAt={request.returned_at}
+                    status={request.status}
+                    viewerId={viewerId}
+                  />
+                </article>
+              );
+            })}
           </div>
         ) : (
           <EmptyState
@@ -275,59 +434,106 @@ export function DashboardTabs({
       {activeTab === "incoming" ? (
         localIncomingRequests.length > 0 ? (
           <div className="space-y-4">
-            {localIncomingRequests.map((request) => (
-              <article
-                key={request.id}
-                className="rounded-[2rem] border border-white/70 bg-white/85 p-5 shadow-soft"
-              >
-                <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-                  <div className="max-w-2xl">
-                    <div className="text-xs font-semibold uppercase tracking-[0.25em] text-teal-700">
-                      Incoming request
-                    </div>
-                    <h3 className="mt-2 text-2xl font-semibold text-ink">{request.listings?.title || "Listing removed"}</h3>
-                    <p className="mt-2 text-sm text-slate-600">
-                      {getFirstName(request.requester?.full_name)} requested this from {formatDateRange(request.start_date, request.end_date)}
-                    </p>
-                    <p className="mt-2 text-sm text-slate-500">
-                      Neighborhood: {request.requester?.neighborhood || "Unknown"}
-                    </p>
-                    {request.message ? <p className="mt-3 text-sm text-slate-500">“{request.message}”</p> : null}
-                  </div>
-                  <div className="flex flex-col items-start gap-3 md:items-end">
-                    <span className={cn("rounded-full px-3 py-1 text-sm font-semibold", getStatusClasses(request.status))}>
-                      {request.status}
-                    </span>
-                    <Link
-                      className="text-sm font-semibold text-teal-700 transition hover:text-teal-800"
-                      href={`/messages/${request.id}`}
-                    >
-                      Open chat
-                    </Link>
-                    {request.status === "pending" ? (
-                      <div className="flex flex-wrap gap-3">
-                        <button
-                          className="rounded-full bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
-                          disabled={pendingActionId === `${request.id}:accepted`}
-                          onClick={() => updateIncomingRequest(request.id, "accepted")}
-                          type="button"
-                        >
-                          {pendingActionId === `${request.id}:accepted` ? "Accepting..." : "Accept"}
-                        </button>
-                        <button
-                          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
-                          disabled={pendingActionId === `${request.id}:declined`}
-                          onClick={() => updateIncomingRequest(request.id, "declined")}
-                          type="button"
-                        >
-                          {pendingActionId === `${request.id}:declined` ? "Declining..." : "Decline"}
-                        </button>
+            {localIncomingRequests.map((request) => {
+              const lifecycleStatus = getBorrowLifecycleStatus(request.status, request.end_date, request.returned_at);
+              const reminder = getBorrowRequestReminder(
+                request.status,
+                request.start_date,
+                request.end_date,
+                request.returned_at
+              );
+              const activityLine = getBorrowRequestActivityLine(request);
+              const canMarkPickedUp = request.status === "accepted";
+              const canMarkReturned = request.status === "borrowed" || lifecycleStatus === "overdue";
+
+              return (
+                <article
+                  key={request.id}
+                  className="rounded-[2rem] border border-white/70 bg-white/85 p-5 shadow-soft"
+                >
+                  <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                    <div className="max-w-2xl">
+                      <div className="text-xs font-semibold uppercase tracking-[0.25em] text-teal-700">
+                        Incoming request
                       </div>
-                    ) : null}
+                      <h3 className="mt-2 text-2xl font-semibold text-ink">{request.listings?.title || "Listing removed"}</h3>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {getFirstName(request.requester?.full_name)} requested this from{" "}
+                        {formatDateRange(request.start_date, request.end_date)}
+                      </p>
+                      <p className="mt-2 text-sm text-slate-500">
+                        Neighborhood: {request.requester?.neighborhood || "Unknown"}
+                      </p>
+                      {request.message ? <p className="mt-3 text-sm text-slate-500">“{request.message}”</p> : null}
+                      {activityLine ? <p className="mt-3 text-sm font-medium text-slate-500">{activityLine}</p> : null}
+                    </div>
+                    <div className="flex flex-col items-start gap-3 md:items-end">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {reminder ? (
+                          <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
+                            {reminder}
+                          </span>
+                        ) : null}
+                        <span
+                          className={cn(
+                            "rounded-full px-3 py-1 text-sm font-semibold",
+                            getStatusClasses(lifecycleStatus)
+                          )}
+                        >
+                          {formatBorrowLifecycleStatus(lifecycleStatus)}
+                        </span>
+                      </div>
+                      <Link
+                        className="text-sm font-semibold text-teal-700 transition hover:text-teal-800"
+                        href={`/messages/${request.id}`}
+                      >
+                        Open chat
+                      </Link>
+                      {request.status === "pending" ? (
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            className="rounded-full bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
+                            disabled={pendingActionId === `${request.id}:accepted`}
+                            onClick={() => updateIncomingRequest(request, "accepted")}
+                            type="button"
+                          >
+                            {pendingActionId === `${request.id}:accepted` ? "Accepting..." : "Accept"}
+                          </button>
+                          <button
+                            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
+                            disabled={pendingActionId === `${request.id}:declined`}
+                            onClick={() => updateIncomingRequest(request, "declined")}
+                            type="button"
+                          >
+                            {pendingActionId === `${request.id}:declined` ? "Declining..." : "Decline"}
+                          </button>
+                        </div>
+                      ) : null}
+                      {canMarkPickedUp ? (
+                        <button
+                          className="rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-70"
+                          disabled={pendingActionId === `${request.id}:borrowed`}
+                          onClick={() => updateIncomingRequest(request, "borrowed")}
+                          type="button"
+                        >
+                          {pendingActionId === `${request.id}:borrowed` ? "Saving..." : "Mark picked up"}
+                        </button>
+                      ) : null}
+                      {canMarkReturned ? (
+                        <button
+                          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-teal-200 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
+                          disabled={pendingActionId === `${request.id}:returned`}
+                          onClick={() => updateIncomingRequest(request, "returned")}
+                          type="button"
+                        >
+                          {pendingActionId === `${request.id}:returned` ? "Saving..." : "Mark returned"}
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         ) : (
           <EmptyState

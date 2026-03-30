@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import type { BorrowRequestReview } from "@/lib/data";
 import { createClient } from "@/lib/supabase/client";
-import { cn, formatDate, getTodayDateValue } from "@/lib/utils";
+import { cn, formatDate, getBorrowLifecycleStatus } from "@/lib/utils";
 import { borrowRequestReviewSchema, type BorrowRequestReviewFormValues } from "@/lib/validators";
 import type { BorrowRequestStatus } from "@/types/database";
 
@@ -17,6 +17,7 @@ type BorrowRequestReviewFormProps = {
   viewerId: string;
   status: BorrowRequestStatus;
   endDate: string;
+  returnedAt?: string | null;
   initialReview: BorrowRequestReview | null;
 };
 
@@ -28,13 +29,15 @@ export function BorrowRequestReviewForm({
   viewerId,
   status,
   endDate,
+  returnedAt,
   initialReview
 }: BorrowRequestReviewFormProps) {
   const [supabase] = useState(() => createClient());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [review, setReview] = useState(initialReview);
-  const isEligible = status === "accepted" && endDate <= getTodayDateValue();
+  const lifecycleStatus = getBorrowLifecycleStatus(status, endDate, returnedAt);
+  const isEligible = lifecycleStatus === "returned" || lifecycleStatus === "overdue";
 
   const form = useForm<BorrowRequestReviewFormValues>({
     resolver: zodResolver(borrowRequestReviewSchema),
@@ -79,7 +82,7 @@ export function BorrowRequestReviewForm({
     toast.success(isEditingExistingReview ? "Review updated." : "Review saved.");
   }
 
-  if (status !== "accepted" && !review) {
+  if ((lifecycleStatus === "pending" || lifecycleStatus === "declined" || lifecycleStatus === "cancelled") && !review) {
     return null;
   }
 

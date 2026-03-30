@@ -3,14 +3,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 function isProtectedListingPath(pathname: string) {
-  return pathname === "/listings/new" || /^\/listings\/[^/]+\/edit$/.test(pathname);
+  return pathname === "/listings/new" || /^\/listings\/[^/]+$/.test(pathname) || /^\/listings\/[^/]+\/edit$/.test(pathname);
+}
+
+function isProtectedBrowsePath(pathname: string) {
+  return pathname === "/browse" || /^\/requests\/[^/]+$/.test(pathname);
 }
 
 export async function middleware(request: NextRequest) {
   const { response, user } = await updateSession(request);
   const { pathname, search } = request.nextUrl;
 
-  const needsAuth = pathname.startsWith("/dashboard") || isProtectedListingPath(pathname);
+  const needsAuth = pathname.startsWith("/dashboard") || isProtectedListingPath(pathname) || isProtectedBrowsePath(pathname);
 
   if (!user && needsAuth) {
     const url = request.nextUrl.clone();
@@ -31,5 +35,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/listings/new", "/listings/:id/edit", "/login", "/signup"]
+  matcher: ["/browse", "/dashboard/:path*", "/listings/:id", "/listings/new", "/listings/:id/edit", "/requests/:id", "/login", "/signup"]
 };

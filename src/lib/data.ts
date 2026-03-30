@@ -34,6 +34,9 @@ export type BorrowRequestWithListing = {
   end_date: string;
   message: string | null;
   status: BorrowRequestStatus;
+  picked_up_at: string | null;
+  returned_at: string | null;
+  cancelled_at: string | null;
   created_at: string;
   listing: {
     id: string;
@@ -57,6 +60,9 @@ export type BorrowRequestConversation = {
   end_date: string;
   message: string | null;
   status: BorrowRequestStatus;
+  picked_up_at: string | null;
+  returned_at: string | null;
+  cancelled_at: string | null;
   created_at: string;
   listing: {
     id: string;
@@ -80,6 +86,9 @@ export type IncomingRequest = {
   end_date: string;
   message: string | null;
   status: BorrowRequestStatus;
+  picked_up_at: string | null;
+  returned_at: string | null;
+  cancelled_at: string | null;
   created_at: string;
   listings: {
     id: string;
@@ -138,6 +147,15 @@ export type BorrowRequestReview = {
   comment: string | null;
   created_at: string;
   reviewer: OwnerSummary | null;
+};
+
+export type ListingAvailabilityRange = {
+  id: string;
+  start_date: string;
+  end_date: string;
+  status: BorrowRequestStatus;
+  picked_up_at: string | null;
+  returned_at: string | null;
 };
 
 function takeFirst<T>(value: T | T[] | null | undefined) {
@@ -317,6 +335,7 @@ export async function getHeaderSessionData() {
       .from("borrow_requests")
       .select("id, listings!inner(owner_id)", { count: "exact", head: true })
       .eq("listings.owner_id", user.id)
+      .in("status", ["pending", "accepted", "borrowed"])
       .gt("created_at", profile.incoming_requests_seen_at);
 
     unreadIncomingCount = count ?? 0;
@@ -410,7 +429,7 @@ export async function getBrowsePageData(filters: {
 
 export async function getListingPageData(listingId: string) {
   const supabase = createClient();
-  const [listingResult, authResult, reviewsResult] = await Promise.all([
+  const [listingResult, authResult, reviewsResult, availabilityResult] = await Promise.all([
     supabase
       .from("listings")
       .select(
@@ -425,7 +444,13 @@ export async function getListingPageData(listingId: string) {
         "id, request_id, listing_id, reviewer_id, rating, comment, created_at, reviewer:profiles!borrow_request_reviews_reviewer_id_fkey(full_name, neighborhood, avatar_url)"
       )
       .eq("listing_id", listingId)
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("borrow_requests")
+      .select("id, start_date, end_date, status, picked_up_at, returned_at")
+      .eq("listing_id", listingId)
+      .in("status", ["accepted", "borrowed"])
+      .order("start_date", { ascending: true })
   ]);
 
   const reviews = (reviewsResult.data ?? []).map((review) => normalizeBorrowRequestReview(review));
@@ -434,7 +459,8 @@ export async function getListingPageData(listingId: string) {
     listing: normalizeListing(listingResult.data),
     viewer: authResult.data.user,
     reviews,
-    reviewSummary: getReviewSummary(reviews)
+    reviewSummary: getReviewSummary(reviews),
+    blockedRanges: (availabilityResult.data ?? []) as ListingAvailabilityRange[]
   };
 }
 
@@ -463,14 +489,14 @@ export async function getDashboardData() {
     supabase
       .from("borrow_requests")
       .select(
-        "id, listing_id, requester_id, start_date, end_date, message, status, created_at, listing:listings!borrow_requests_listing_id_fkey(id, title, photo_url, neighborhood, pickup_latitude, pickup_longitude, owner_id, is_available, owner:profiles!listings_owner_id_fkey(full_name, neighborhood, avatar_url))"
+        "id, listing_id, requester_id, start_date, end_date, message, status, picked_up_at, returned_at, cancelled_at, created_at, listing:listings!borrow_requests_listing_id_fkey(id, title, photo_url, neighborhood, pickup_latitude, pickup_longitude, owner_id, is_available, owner:profiles!listings_owner_id_fkey(full_name, neighborhood, avatar_url))"
       )
       .eq("requester_id", user.id)
       .order("created_at", { ascending: false }),
     supabase
       .from("borrow_requests")
       .select(
-        "id, listing_id, requester_id, start_date, end_date, message, status, created_at, listings!inner(id, title, photo_url, neighborhood, pickup_latitude, pickup_longitude, owner_id, is_available), requester:profiles!borrow_requests_requester_id_fkey(full_name, neighborhood, avatar_url)"
+        "id, listing_id, requester_id, start_date, end_date, message, status, picked_up_at, returned_at, cancelled_at, created_at, listings!inner(id, title, photo_url, neighborhood, pickup_latitude, pickup_longitude, owner_id, is_available), requester:profiles!borrow_requests_requester_id_fkey(full_name, neighborhood, avatar_url)"
       )
       .eq("listings.owner_id", user.id)
       .order("created_at", { ascending: false }),
@@ -479,6 +505,7 @@ export async function getDashboardData() {
           .from("borrow_requests")
           .select("id, listings!inner(owner_id)", { count: "exact", head: true })
           .eq("listings.owner_id", user.id)
+          .in("status", ["pending", "accepted", "borrowed"])
           .gt("created_at", profile.incoming_requests_seen_at)
       : Promise.resolve({ count: 0 })
   ]);
@@ -522,7 +549,7 @@ export async function getBorrowRequestChatPageData(requestId: string) {
     supabase
       .from("borrow_requests")
       .select(
-        "id, listing_id, requester_id, start_date, end_date, message, status, created_at, listing:listings!borrow_requests_listing_id_fkey(id, title, photo_url, neighborhood, pickup_latitude, pickup_longitude, owner_id, is_available, owner:profiles!listings_owner_id_fkey(full_name, neighborhood, avatar_url)), requester:profiles!borrow_requests_requester_id_fkey(full_name, neighborhood, avatar_url)"
+        "id, listing_id, requester_id, start_date, end_date, message, status, picked_up_at, returned_at, cancelled_at, created_at, listing:listings!borrow_requests_listing_id_fkey(id, title, photo_url, neighborhood, pickup_latitude, pickup_longitude, owner_id, is_available, owner:profiles!listings_owner_id_fkey(full_name, neighborhood, avatar_url)), requester:profiles!borrow_requests_requester_id_fkey(full_name, neighborhood, avatar_url)"
       )
       .eq("id", requestId)
       .maybeSingle(),

@@ -1,7 +1,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type ListingCategory = "Tools" | "Outdoor" | "Kitchen" | "Electronics" | "Sports" | "Other";
-export type BorrowRequestStatus = "pending" | "accepted" | "declined";
+export type BorrowRequestStatus = "pending" | "accepted" | "borrowed" | "returned" | "declined" | "cancelled";
 export type ToolRequestCommentMediaKind = "image" | "video";
 
 export interface Database {
@@ -80,6 +80,9 @@ export interface Database {
           end_date: string;
           message: string | null;
           status: BorrowRequestStatus;
+          picked_up_at: string | null;
+          returned_at: string | null;
+          cancelled_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -90,6 +93,9 @@ export interface Database {
           end_date: string;
           message?: string | null;
           status?: BorrowRequestStatus;
+          picked_up_at?: string | null;
+          returned_at?: string | null;
+          cancelled_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -97,6 +103,9 @@ export interface Database {
           end_date?: string;
           message?: string | null;
           status?: BorrowRequestStatus;
+          picked_up_at?: string | null;
+          returned_at?: string | null;
+          cancelled_at?: string | null;
         };
         Relationships: [];
       };

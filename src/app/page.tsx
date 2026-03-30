@@ -14,20 +14,17 @@ export default function HomePage() {
         </div>
       ) : null}
 
-      <section className="grid items-center gap-10 overflow-hidden rounded-[2.5rem] border border-white/70 bg-white/80 px-6 py-12 shadow-soft backdrop-blur sm:px-10 lg:grid-cols-[1.1fr,0.9fr] lg:px-14 lg:py-16">
-        <div>
+      <section className="overflow-hidden rounded-[2.5rem] border border-white/70 bg-white/85 px-6 py-12 shadow-soft backdrop-blur sm:px-10 lg:px-14 lg:py-16">
+        <div className="mx-auto max-w-4xl text-center">
           <div className="inline-flex rounded-full border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700">
-            Community-powered borrowing
+            Neighborhood lending made simple
           </div>
-          <h1 className="mt-6 max-w-2xl font-display text-5xl leading-tight text-ink sm:text-6xl">
-            Share the tools you own. Ask for what you need next door.
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-            ToolShare helps neighbors lend drills, ladders, kitchen gear, sports equipment, and other useful items
-            without the hassle of group chats or spreadsheets, while also giving borrowers a place to post what they
-            need and collect replies from the community.
+          <h1 className="mt-6 font-display text-5xl leading-tight text-ink sm:text-6xl">ToolShare</h1>
+          <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-slate-600">
+            ToolShare is a neighborhood platform where people can share useful items, request tools they need, chat
+            inside the app, and build trust through reviews and ratings.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link
               className="rounded-full bg-teal-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-teal-700"
               href="/signup"
@@ -36,86 +33,39 @@ export default function HomePage() {
             </Link>
             <Link
               className="rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-teal-200 hover:text-teal-700"
-              href="/browse"
+              href="/login"
             >
-              Browse items
+              Log in
             </Link>
-            <Link
-              className="rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-teal-200 hover:text-teal-700"
-              href="/requests/new"
-            >
-              Request a tool
-            </Link>
-          </div>
-          <div className="mt-10 grid gap-4 text-sm text-slate-600 sm:grid-cols-3">
-            <div className="rounded-3xl bg-canvas px-4 py-4">
-              <div className="font-semibold text-ink">Lend with confidence</div>
-              <p className="mt-2">Control availability, approve requests, and keep everything in one dashboard.</p>
-            </div>
-            <div className="rounded-3xl bg-canvas px-4 py-4">
-              <div className="font-semibold text-ink">Keep it local</div>
-              <p className="mt-2">Filter by neighborhood so pickups stay quick, easy, and nearby.</p>
-            </div>
-            <div className="rounded-3xl bg-canvas px-4 py-4">
-              <div className="font-semibold text-ink">Borrow more, buy less</div>
-              <p className="mt-2">Stretch budgets, reduce waste, and turn underused gear into a shared resource.</p>
-            </div>
           </div>
         </div>
 
-        <div className="relative">
-          <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-teal-300/30 via-emerald-200/20 to-transparent blur-3xl" />
-          <div className="relative overflow-hidden rounded-[2rem] bg-ink p-6 text-white shadow-soft">
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-              <div className="text-sm uppercase tracking-[0.3em] text-teal-200">How it works</div>
-              <div className="mt-6 space-y-5">
-                <div className="rounded-3xl bg-white/10 p-4">
-                  <div className="text-sm font-semibold text-teal-100">1. Share an item</div>
-                  <p className="mt-2 text-sm text-teal-50/90">
-                    Post a photo, add a description, and tell neighbors where pickup happens.
-                  </p>
-                </div>
-                <div className="rounded-3xl bg-white/10 p-4">
-                  <div className="text-sm font-semibold text-teal-100">2. Review requests</div>
-                  <p className="mt-2 text-sm text-teal-50/90">
-                    Incoming borrow requests land in your dashboard with dates and a note from the requester.
-                  </p>
-                </div>
-                <div className="rounded-3xl bg-white/10 p-4">
-                  <div className="text-sm font-semibold text-teal-100">3. Keep it moving</div>
-                  <p className="mt-2 text-sm text-teal-50/90">
-                    Update availability anytime, or post a request when you need a tool the community has not listed yet.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="mx-auto mt-12 grid max-w-5xl gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <article className="rounded-[1.75rem] bg-canvas px-5 py-5 text-left">
+            <div className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-700">Browse</div>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Find tools and useful household items shared by people in your neighborhood.
+            </p>
+          </article>
+          <article className="rounded-[1.75rem] bg-canvas px-5 py-5 text-left">
+            <div className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-700">Request</div>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Send borrow requests with dates and a message, or post a tool request when nothing is listed yet.
+            </p>
+          </article>
+          <article className="rounded-[1.75rem] bg-canvas px-5 py-5 text-left">
+            <div className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-700">Chat</div>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Use in-app chat to coordinate pickup, return timing, and other details in one place.
+            </p>
+          </article>
+          <article className="rounded-[1.75rem] bg-canvas px-5 py-5 text-left">
+            <div className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-700">Reviews</div>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Leave ratings and reviews after completed borrows so future neighbors can borrow with confidence.
+            </p>
+          </article>
         </div>
-      </section>
-
-      <section className="mt-16 grid gap-6 lg:grid-cols-3">
-        <article className="rounded-[2rem] border border-white/70 bg-white/80 p-7 shadow-soft">
-          <div className="text-sm font-semibold uppercase tracking-[0.25em] text-teal-700">For lenders</div>
-          <h2 className="mt-4 font-display text-3xl text-ink">Put spare gear to work</h2>
-          <p className="mt-3 text-slate-600">
-            Old hedge trimmers, folding tables, camping stoves, and mixers can all help someone nearby.
-          </p>
-        </article>
-        <article className="rounded-[2rem] border border-white/70 bg-white/80 p-7 shadow-soft">
-          <div className="text-sm font-semibold uppercase tracking-[0.25em] text-teal-700">For borrowers</div>
-          <h2 className="mt-4 font-display text-3xl text-ink">Find it fast or ask for it</h2>
-          <p className="mt-3 text-slate-600">
-            Search by keyword, filter by category, request dates that work for your project, or post a need so others
-            can respond with an offer.
-          </p>
-        </article>
-        <article className="rounded-[2rem] border border-white/70 bg-white/80 p-7 shadow-soft">
-          <div className="text-sm font-semibold uppercase tracking-[0.25em] text-teal-700">For communities</div>
-          <h2 className="mt-4 font-display text-3xl text-ink">Build trust through sharing</h2>
-          <p className="mt-3 text-slate-600">
-            ToolShare creates lightweight, practical opportunities for neighbors to help one another every week.
-          </p>
-        </article>
       </section>
     </div>
   );

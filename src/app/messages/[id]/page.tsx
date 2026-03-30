@@ -5,7 +5,16 @@ import { BorrowRequestChat } from "@/components/borrow-request-chat";
 import { SetupNotice } from "@/components/setup-notice";
 import { getBorrowRequestChatPageData } from "@/lib/data";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { cn, formatDateRange, getFirstName, getStatusClasses } from "@/lib/utils";
+import {
+  cn,
+  formatBorrowLifecycleStatus,
+  formatDateRange,
+  formatDateTime,
+  getBorrowLifecycleStatus,
+  getBorrowRequestReminder,
+  getFirstName,
+  getStatusClasses
+} from "@/lib/utils";
 
 type MessagePageProps = {
   params: {
@@ -33,6 +42,8 @@ export default async function MessagePage({ params }: MessagePageProps) {
     ? getFirstName(chatRequest.requester?.full_name)
     : getFirstName(chatRequest.listing?.owner?.full_name);
   const backHref = isOwner ? "/dashboard?tab=incoming" : "/dashboard?tab=requests";
+  const lifecycleStatus = getBorrowLifecycleStatus(chatRequest.status, chatRequest.end_date, chatRequest.returned_at);
+  const reminder = getBorrowRequestReminder(chatRequest.status, chatRequest.start_date, chatRequest.end_date, chatRequest.returned_at);
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -64,9 +75,16 @@ export default async function MessagePage({ params }: MessagePageProps) {
                   {chatRequest.listing?.title || "Listing removed"}
                 </h2>
               </div>
-              <span className={cn("rounded-full px-3 py-1 text-sm font-semibold", getStatusClasses(chatRequest.status))}>
-                {chatRequest.status}
-              </span>
+              <div className="flex flex-wrap justify-end gap-2">
+                {reminder ? (
+                  <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
+                    {reminder}
+                  </span>
+                ) : null}
+                <span className={cn("rounded-full px-3 py-1 text-sm font-semibold", getStatusClasses(lifecycleStatus))}>
+                  {formatBorrowLifecycleStatus(lifecycleStatus)}
+                </span>
+              </div>
             </div>
 
             <div className="mt-6 grid gap-4 rounded-[1.75rem] bg-canvas p-5">
@@ -100,6 +118,17 @@ export default async function MessagePage({ params }: MessagePageProps) {
               <div className="mt-6 rounded-[1.75rem] border border-dashed border-teal-200 bg-teal-50 p-5">
                 <div className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">Original request note</div>
                 <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">“{chatRequest.message}”</p>
+              </div>
+            ) : null}
+
+            {chatRequest.picked_up_at || chatRequest.returned_at || chatRequest.cancelled_at ? (
+              <div className="mt-6 rounded-[1.75rem] border border-slate-200 bg-white p-5">
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">Lifecycle</div>
+                <div className="mt-3 space-y-2 text-sm text-slate-600">
+                  {chatRequest.picked_up_at ? <p>Picked up {formatDateTime(chatRequest.picked_up_at)}</p> : null}
+                  {chatRequest.returned_at ? <p>Returned {formatDateTime(chatRequest.returned_at)}</p> : null}
+                  {chatRequest.cancelled_at ? <p>Cancelled {formatDateTime(chatRequest.cancelled_at)}</p> : null}
+                </div>
               </div>
             ) : null}
 

@@ -19,6 +19,7 @@ ToolShare is a full-stack neighborhood lending library built with Next.js 14, Su
 - Optional pickup pins with a live browse map powered by MapLibre and OpenFreeMap
 - Keyword search and filters for category and neighborhood
 - Borrow requests with pending, accepted, and declined states
+- Borrow lifecycle support for cancellations, pickup confirmation, returns, overdue reminders, and blackout-date conflict prevention
 - Tool-request posts where neighbors can ask for a tool they need
 - Comment threads on tool-request posts with optional photo or video replies
 - In-app unread badge for incoming requests
@@ -50,7 +51,7 @@ You can find both values in Supabase under `Project Settings -> API`.
 ## Supabase Setup
 
 1. Create a new Supabase project.
-2. Run the SQL in [supabase/migrations/001_init.sql](/Users/saibyasachiruhan/Desktop/Borrow it/supabase/migrations/001_init.sql) from the SQL editor, then apply [supabase/migrations/002_add_listing_coordinates.sql](/Users/saibyasachiruhan/Desktop/Borrow it/supabase/migrations/002_add_listing_coordinates.sql), [supabase/migrations/003_add_tool_requests.sql](/Users/saibyasachiruhan/Desktop/Borrow it/supabase/migrations/003_add_tool_requests.sql), and [supabase/migrations/004_add_tool_request_comment_replies.sql](/Users/saibyasachiruhan/Desktop/Borrow it/supabase/migrations/004_add_tool_request_comment_replies.sql).
+2. Run the SQL in [supabase/migrations/001_init.sql](/Users/saibyasachiruhan/Desktop/Borrow it/supabase/migrations/001_init.sql) from the SQL editor, then apply [supabase/migrations/002_add_listing_coordinates.sql](/Users/saibyasachiruhan/Desktop/Borrow it/supabase/migrations/002_add_listing_coordinates.sql), [supabase/migrations/003_add_tool_requests.sql](/Users/saibyasachiruhan/Desktop/Borrow it/supabase/migrations/003_add_tool_requests.sql), [supabase/migrations/004_add_tool_request_comment_replies.sql](/Users/saibyasachiruhan/Desktop/Borrow it/supabase/migrations/004_add_tool_request_comment_replies.sql), [supabase/migrations/005_add_borrow_request_messages.sql](/Users/saibyasachiruhan/Desktop/Borrow it/supabase/migrations/005_add_borrow_request_messages.sql), [supabase/migrations/006_add_borrow_request_reviews.sql](/Users/saibyasachiruhan/Desktop/Borrow it/supabase/migrations/006_add_borrow_request_reviews.sql), and [supabase/migrations/007_add_borrow_request_lifecycle.sql](/Users/saibyasachiruhan/Desktop/Borrow it/supabase/migrations/007_add_borrow_request_lifecycle.sql).
 3. The migrations create:
    - `profiles`
    - `listings`

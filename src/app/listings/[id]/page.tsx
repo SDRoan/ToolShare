@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { BorrowRequestForm } from "@/components/borrow-request-form";
+import { ListingDeleteButton } from "@/components/listing-delete-button";
+import { ListingAvailabilityCalendar } from "@/components/listing-availability-calendar";
 import { SetupNotice } from "@/components/setup-notice";
 import { getListingPageData } from "@/lib/data";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
@@ -23,7 +25,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
     );
   }
 
-  const { listing, viewer, reviews, reviewSummary } = await getListingPageData(params.id);
+  const { listing, viewer, reviews, reviewSummary, blockedRanges } = await getListingPageData(params.id);
 
   if (!listing) {
     notFound();
@@ -91,6 +93,8 @@ export default async function ListingPage({ params }: ListingPageProps) {
             </div>
           </div>
 
+          <ListingAvailabilityCalendar blockedRanges={blockedRanges} />
+
           <section className="mt-8 rounded-[2rem] bg-canvas p-5 sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -132,19 +136,28 @@ export default async function ListingPage({ params }: ListingPageProps) {
           </section>
 
           {viewer?.id === listing.owner_id ? (
-            <div className="mt-6">
+            <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 className="inline-flex rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-teal-200 hover:text-teal-700"
                 href={`/listings/${listing.id}/edit`}
               >
                 Edit listing
               </Link>
+              <ListingDeleteButton
+                className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                listingId={listing.id}
+                ownerId={listing.owner_id}
+                photoUrl={listing.photo_url}
+                redirectTo="/browse"
+                viewerId={viewer.id}
+              />
             </div>
           ) : null}
         </section>
 
         <aside className="space-y-6">
           <BorrowRequestForm
+            blockedRanges={blockedRanges}
             isAvailable={listing.is_available}
             listingId={listing.id}
             ownerId={listing.owner_id}

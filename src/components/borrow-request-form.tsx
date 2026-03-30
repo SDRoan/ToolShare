@@ -7,7 +7,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import type { ListingAvailabilityRange } from "@/lib/data";
 import { createClient } from "@/lib/supabase/client";
+import { datesOverlap, formatDateRange } from "@/lib/utils";
 import { borrowRequestSchema, type BorrowRequestFormValues } from "@/lib/validators";
 
 type BorrowRequestFormProps = {
@@ -15,9 +17,10 @@ type BorrowRequestFormProps = {
   ownerId: string;
   viewerId: string | null;
   isAvailable: boolean;
+  blockedRanges: ListingAvailabilityRange[];
 };
 
-export function BorrowRequestForm({ listingId, ownerId, viewerId, isAvailable }: BorrowRequestFormProps) {
+export function BorrowRequestForm({ listingId, ownerId, viewerId, isAvailable, blockedRanges }: BorrowRequestFormProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,6 +34,12 @@ export function BorrowRequestForm({ listingId, ownerId, viewerId, isAvailable }:
       message: ""
     }
   });
+  const startDate = form.watch("startDate");
+  const endDate = form.watch("endDate");
+  const conflictingRange =
+    startDate && endDate
+      ? blockedRanges.find((range) => datesOverlap(startDate, endDate, range.start_date, range.end_date))
+      : null;
 
   if (!viewerId) {
     return (
@@ -92,6 +101,20 @@ export function BorrowRequestForm({ listingId, ownerId, viewerId, isAvailable }:
   }
 
   async function onSubmit(values: BorrowRequestFormValues) {
+    const overlappingRange = blockedRanges.find((range) =>
+      datesOverlap(values.startDate, values.endDate, range.start_date, range.end_date)
+    );
+
+    if (overlappingRange) {
+      const message = `Those dates overlap an existing borrow (${formatDateRange(
+        overlappingRange.start_date,
+        overlappingRange.end_date
+      )}).`;
+      form.setError("endDate", { message });
+      toast.error(message);
+      return;
+    }
+
     setIsSubmitting(true);
 
     const { error } = await supabase.from("borrow_requests").insert({
@@ -105,6 +128,11 @@ export function BorrowRequestForm({ listingId, ownerId, viewerId, isAvailable }:
     setIsSubmitting(false);
 
     if (error) {
+      if (error.message.includes("already booked")) {
+        toast.error("Those dates are no longer available. Pick another window from the calendar.");
+        return;
+      }
+
       toast.error(error.message);
       return;
     }
@@ -120,6 +148,17 @@ export function BorrowRequestForm({ listingId, ownerId, viewerId, isAvailable }:
       <p className="mt-3 text-sm leading-7 text-slate-600">
         Pick the dates you need it and add a short note so the owner has context.
       </p>
+      {blockedRanges.length > 0 ? (
+        <div className="mt-4 rounded-[1.5rem] bg-canvas px-4 py-4 text-sm leading-7 text-slate-600">
+          Upcoming blackout dates:{" "}
+          <span className="font-semibold text-ink">
+            {blockedRanges
+              .slice(0, 3)
+              .map((range) => formatDateRange(range.start_date, range.end_date))
+              .join(" • ")}
+          </span>
+        </div>
+      ) : null}
 
       <form className="mt-6 space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
         <div className="grid gap-5 sm:grid-cols-2">
@@ -155,6 +194,15 @@ export function BorrowRequestForm({ listingId, ownerId, viewerId, isAvailable }:
             ) : null}
           </div>
         </div>
+        {conflictingRange ? (
+          <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
+            That window overlaps an existing borrow from{" "}
+            <span className="font-semibold">
+              {formatDateRange(conflictingRange.start_date, conflictingRange.end_date)}
+            </span>
+            .
+          </div>
+        ) : null}
 
         <div>
           <label className="text-sm font-medium text-slate-700" htmlFor="message">

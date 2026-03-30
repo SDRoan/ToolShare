@@ -13,6 +13,7 @@ import { getStoragePathFromUrl, slugifyFileName } from "@/lib/utils";
 import { listingSchema, type ListingFormValues } from "@/lib/validators";
 import { ListingCategory } from "@/types/database";
 
+import { ListingDeleteButton } from "./listing-delete-button";
 import { LocationPicker } from "./location-picker";
 
 type ListingFormProps = {
@@ -56,7 +57,6 @@ function getErrorMessage(error: unknown, fallback: string) {
 export function ListingForm({ mode, userId, listingId, initialValues }: ListingFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const supabase = createClient();
 
@@ -177,37 +177,6 @@ export function ListingForm({ mode, userId, listingId, initialValues }: ListingF
     }
   }
 
-  async function handleDelete() {
-    if (!listingId) {
-      return;
-    }
-
-    const confirmed = window.confirm("Delete this listing? Any related borrow requests will also be removed.");
-
-    if (!confirmed) {
-      return;
-    }
-
-    setIsDeleting(true);
-
-    try {
-      const { error } = await supabase.from("listings").delete().eq("id", listingId).eq("owner_id", userId);
-
-      if (error) {
-        throw error;
-      }
-
-      await maybeDeleteOldPhoto(initialValues?.photoUrl);
-      toast.success("Listing deleted.");
-      router.push("/dashboard?tab=listings");
-      router.refresh();
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Could not delete this listing."));
-    } finally {
-      setIsDeleting(false);
-    }
-  }
-
   return (
     <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-soft sm:p-8">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -220,14 +189,13 @@ export function ListingForm({ mode, userId, listingId, initialValues }: ListingF
           </h1>
         </div>
         {mode === "edit" ? (
-          <button
-            className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isDeleting}
-            onClick={handleDelete}
-            type="button"
-          >
-            {isDeleting ? "Deleting..." : "Delete listing"}
-          </button>
+          <ListingDeleteButton
+            listingId={listingId!}
+            ownerId={userId}
+            photoUrl={initialValues?.photoUrl}
+            redirectTo="/dashboard?tab=listings"
+            viewerId={userId}
+          />
         ) : null}
       </div>
 

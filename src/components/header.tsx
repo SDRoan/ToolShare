@@ -31,15 +31,14 @@ export function Header({ user, profile, unreadIncomingCount }: HeaderProps) {
         </div>
 
         <nav className="flex flex-wrap items-center justify-end gap-2 text-sm font-medium text-slate-700">
-          <Link
-            className="rounded-full px-4 py-2 transition hover:bg-teal-50 hover:text-teal-700"
-            href="/browse"
-          >
-            Browse
-          </Link>
-
           {user ? (
             <>
+              <Link
+                className="rounded-full px-4 py-2 transition hover:bg-teal-50 hover:text-teal-700"
+                href="/browse"
+              >
+                Browse
+              </Link>
               <Link
                 className="rounded-full px-4 py-2 transition hover:bg-teal-50 hover:text-teal-700"
                 href="/listings/new"

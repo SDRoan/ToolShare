@@ -58,7 +58,7 @@ export function BorrowRequestChat({
   const [messages, setMessages] = useState(initialMessages);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const canSend = requestStatus !== "declined";
+  const canSend = requestStatus !== "declined" && requestStatus !== "cancelled" && requestStatus !== "returned";
 
   const form = useForm<BorrowRequestChatMessageFormValues>({
     resolver: zodResolver(borrowRequestChatMessageSchema),
@@ -198,7 +198,7 @@ export function BorrowRequestChat({
           placeholder={
             canSend
               ? "Example: I can meet near the library at 6:30 PM if that works for you."
-              : "This request was declined, so this conversation is now read only."
+              : "This request is closed, so this conversation is now read only."
           }
           {...form.register("message")}
         />

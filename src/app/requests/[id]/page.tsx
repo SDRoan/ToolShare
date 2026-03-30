@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { SetupNotice } from "@/components/setup-notice";
 import { ToolRequestCommentForm } from "@/components/tool-request-comment-form";
+import { ToolRequestDeleteButton } from "@/components/tool-request-delete-button";
 import { ToolRequestThread } from "@/components/tool-request-thread";
 import { getToolRequestPageData } from "@/lib/data";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
@@ -74,9 +75,16 @@ export default async function ToolRequestPage({ params }: ToolRequestPageProps) 
               Back to browse
             </Link>
             {viewer?.id === toolRequest.requester_id ? (
-              <span className="rounded-full bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-700">
-                This is your request post
-              </span>
+              <>
+                <span className="rounded-full bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-700">
+                  This is your request post
+                </span>
+                <ToolRequestDeleteButton
+                  requestId={toolRequest.id}
+                  requesterId={toolRequest.requester_id}
+                  viewerId={viewer.id}
+                />
+              </>
             ) : null}
           </div>
         </section>
